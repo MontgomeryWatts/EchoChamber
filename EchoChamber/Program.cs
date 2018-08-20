@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Windows.Forms;
 using WMPLib;
 
@@ -6,31 +7,33 @@ namespace EchoChamber
 {
     class Program
     {
-        private const Int32 HALF_SECOND = 500;
+        private const int HALF_SECOND = 500;
+        private const int ONE_SECOND = HALF_SECOND * 2;
+        private const string FILE_FILTER = "Music Files(*.mp3, *.wav)|*.mp3;*.wav";
 
         [STAThread]
         static void Main(string[] args)
         {
             Prompt();
-            int echoes = NumberPrompt("Enter the number of times you'd like the song to echo: ");
-            int delay = NumberPrompt("Enter the delay between echos in seconds: ");
-            string url = getMedia();
+            int echoes = IntPrompt("Enter the number of times you'd like the song to echo: ");
+            int  delay = (int)(DoublePrompt("Enter the delay between echos in seconds: ") * ONE_SECOND);
+            string url = GetMedia();
 
-            startPlayerThread(url);
+            StartPlayerThread(url);
             for(int i = 0; i < echoes; i++)
             {
-                System.Threading.Thread.Sleep(HALF_SECOND * 2 * delay);
-                startPlayerThread(url);
+                Thread.Sleep(delay);
+                StartPlayerThread(url);
             }
 
         }
 
         /**
          * Creates and returns a WindowsMediaPlayer that will play music from the given url
-         * and lowers its volume so you keep your eardrums.
+         * and lowers its volume so you keep your eardrums intact.
          */
 
-        private static WindowsMediaPlayer createPlayer(string url)
+        private static WindowsMediaPlayer CreatePlayer(string url)
         {
             WindowsMediaPlayer player = new WindowsMediaPlayer();
             player.URL = url;
@@ -43,10 +46,10 @@ namespace EchoChamber
          * Returns the path to the chosen file.
          */
 
-        private static string getMedia()
+        private static string GetMedia()
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Music Files(*.mp3, *.wav)|*.mp3;*.wav";
+            ofd.Filter = FILE_FILTER;
             if (ofd.ShowDialog() == DialogResult.OK)
             {
                 return ofd.FileName;
@@ -63,23 +66,22 @@ namespace EchoChamber
          * Creates and starts a Thread that will play the media at a given url until it is over .
          */
 
-        private static void startPlayerThread(string url)
+        private static void StartPlayerThread(string url)
         {
-            new System.Threading.Thread(() =>
+            new Thread(() =>
             {
-                WindowsMediaPlayer player = createPlayer(url);
+                WindowsMediaPlayer player = CreatePlayer(url);
                 player.controls.play();
 
                 //Duration can't be retrieved until song is started.
-                System.Threading.Thread.Sleep(HALF_SECOND);
-                Int32 duration = (Int32)player.currentMedia.duration * 1000;
-                System.Threading.Thread.Sleep(duration);
-
+                Thread.Sleep(HALF_SECOND);
+                Int32 duration = (Int32)player.currentMedia.duration * ONE_SECOND;
+                Thread.Sleep(duration);
 
             }).Start();
         }
 
-        private static int NumberPrompt(string prompt)
+        private static int IntPrompt(string prompt)
         {
             int number;
             Console.WriteLine(prompt);
@@ -89,7 +91,21 @@ namespace EchoChamber
             }
             else
             {
-                return NumberPrompt(prompt);
+                return IntPrompt(prompt);
+            }
+        }
+
+        private static double DoublePrompt(string prompt)
+        {
+            double number;
+            Console.WriteLine(prompt);
+            if (double.TryParse(Console.ReadLine(), out number))
+            {
+                return number;
+            }
+            else
+            {
+                return DoublePrompt(prompt);
             }
         }
     }
